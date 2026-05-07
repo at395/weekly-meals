@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Weekly Meals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#F7F3EC;--ink:#1C1917;--ink2:#44403C;--ink3:#A8A29E;
+  --sage:#4A7C59;--sage-light:#E8F0EA;--sage-dark:#3A6347;
+  --rust:#C0552A;--rust-light:#FAF0EB;
+  --border:#E5DDD5;--card:#FFFFFF;--r:14px;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);display:flex;flex-direction:column}
+
+/* ── App shell ── */
+#app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;width:100%}
+header{background:var(--card);border-bottom:1px solid var(--border);padding:16px 20px 12px;flex-shrink:0}
+.header-row{display:flex;align-items:baseline;justify-content:space-between}
+h1{font-family:'Fraunces',serif;font-weight:300;font-size:24px;letter-spacing:-0.3px}
+h1 em{font-style:italic;color:var(--sage)}
+.week-lbl{font-size:12px;color:var(--ink3)}
+.mode-toggle{display:flex;background:var(--cream);border-radius:20px;padding:3px;margin-top:10px;border:1px solid var(--border)}
+.mode-btn{flex:1;padding:7px;border-radius:16px;text-align:center;font-size:13px;color:var(--ink3);cursor:pointer;transition:all .18s;border:none;background:transparent;font-family:'DM Sans',sans-serif}
+.mode-btn.active{background:var(--card);color:var(--ink);font-weight:500;border:1px solid var(--border)}
+
+/* ── Main scrollable area ── */
+#main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+/* ── Tab bar ── */
+.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:10px 4px;text-align:center;font-size:12px;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--sage);border-bottom-color:var(--sage);font-weight:500}
+
+/* ── Panels ── */
+.panel{display:none;padding:16px}
+.panel.active{display:block}
+
+/* ── Buttons ── */
+.btn-primary{width:100%;padding:15px;background:var(--sage);color:#fff;border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;transition:opacity .18s;margin-bottom:14px}
+.btn-primary:hover{opacity:.88}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed}
+.btn-rust{background:var(--rust)}
+
+/* ── Day cards ── */
+.day-card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);margin-bottom:8px;overflow:hidden}
+.day-hdr{padding:10px 14px;border-bottom:1px solid var(--border)}
+.day-name{font-family:'Fraunces',serif;font-weight:500;font-size:16px}
+.meal-row{padding:9px 14px;display:flex;gap:10px;align-items:flex-start}
+.meal-row+.meal-row{border-top:1px solid var(--border)}
+.meal-type{font-size:10px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);min-width:42px;padding-top:2px}
+.meal-name{font-size:14px;color:var(--ink);line-height:1.4}
+
+/* ── Skeleton ── */
+.skel{background:linear-gradient(90deg,#ede9e3 25%,#f5f2ed 50%,#ede9e3 75%);background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:5px;height:14px}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+/* ── Chat input ── */
+.chat-bar{background:var(--card);border-top:1px solid var(--border);padding:10px 14px calc(10px + env(safe-area-inset-bottom));flex-shrink:0}
+.chat-row{display:flex;gap:8px;align-items:center}
+.chat-input{flex:1;padding:11px 14px;border:1.5px solid var(--border);border-radius:22px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--cream);outline:none;transition:border-color .15s}
+.chat-input:focus{border-color:var(--sage)}
+.icon-btn{width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:all .18s}
+.mic-btn{background:var(--sage);color:#fff}
+.mic-btn.recording{background:var(--rust);animation:pulse .8s infinite}
+.send-btn{background:var(--rust);color:#fff}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
+
+/* ── Voice screen ── */
+#voice-screen{display:none;flex-direction:column;align-items:center;padding:32px 20px;min-height:300px}
+#voice-screen.active{display:flex}
+.voice-orb{width:100px;height:100px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;cursor:pointer;transition:all .3s;border:4px solid transparent;margin:20px 0}
+.orb-idle{background:var(--sage-light);border-color:var(--border)}
+.orb-listening{background:#fee2e2;border-color:#fca5a5;animation:pulse .8s infinite}
+.orb-thinking{background:#EEF2FF;border-color:#c7d2fe}
+.orb-speaking{background:#EEF2FF;border-color:#a5b4fc;animation:pulse 1.2s infinite}
+.voice-status{font-size:14px;color:var(--ink3);margin-bottom:8px;text-align:center;min-height:20px}
+.voice-hint{font-size:12px;color:var(--ink3);text-align:center;margin-top:4px}
+.transcript-card{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:12px 14px;width:100%;margin-top:16px}
+.transcript-lbl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:4px}
+.transcript-text{font-size:14px;color:var(--ink);line-height:1.5}
+.response-card{background:var(--sage);border-radius:12px;padding:12px 14px;width:100%;margin-top:8px}
+.response-text{font-size:14px;color:#fff;line-height:1.5}
+
+/* ── Shopping ── */
+.category-card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);margin-bottom:10px;overflow:hidden}
+.cat-hdr{padding:10px 14px;background:var(--sage-light);border-bottom:1px solid var(--border);font-size:11px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--sage)}
+.shop-item{padding:11px 14px;display:flex;align-items:center;gap:12px;border-top:1px solid var(--border);cursor:pointer;transition:background .12s}
+.shop-item:first-of-type{border-top:none}
+.shop-item:hover{background:var(--cream)}
+.shop-item.removed{opacity:.4}
+.shop-item.removed .item-name-text{text-decoration:line-through;color:var(--ink3)}
+.check-dot{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s}
+.shop-item:not(.removed) .check-dot{background:var(--sage);border-color:var(--sage);color:#fff}
+.item-name-text{flex:1;font-size:14px;color:var(--ink)}
+.item-qty-badge{font-size:11px;color:var(--ink3);background:var(--cream);border:1px solid var(--border);border-radius:6px;padding:2px 8px;white-space:nowrap}
+.remove-btn{font-size:16px;color:var(--border);padding:2px 4px;line-height:1}
+
+/* ── Ocado footer ── */
+.ocado-bar{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-top:4px}
+.ocado-meta{font-size:13px;color:var(--ink2);margin-bottom:10px}
+.ocado-meta strong{color:var(--ink)}
+.ocado-confirm-btn{width:100%;padding:14px;background:var(--sage);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;transition:opacity .18s}
+.ocado-confirm-btn:hover{opacity:.88}
+.ocado-note{font-size:11px;color:var(--ink3);text-align:center;margin-top:8px}
+
+/* ── Prefs ── */
+.prefs-card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:18px;margin-bottom:12px}
+.prefs-card h3{font-family:'Fraunces',serif;font-weight:500;font-size:18px;margin-bottom:14px}
+.pref-row{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.pref-row label{font-size:11px;font-weight:500;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px}
+.pref-input{padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--cream);outline:none;transition:border-color .15s}
+.pref-input:focus{border-color:var(--sage)}
+.save-btn{width:100%;padding:13px;background:var(--ink);color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;transition:opacity .15s;margin-top:4px}
+.save-btn:hover{opacity:.85}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{background:var(--rust-light);color:var(--rust);font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid #f0c4b0}
+
+/* ── Bottom nav ── */
+#bottom-nav{background:var(--card);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom);flex-shrink:0}
+.nav-btn{flex:1;padding:10px 4px 8px;border:none;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink3);font-family:'DM Sans',sans-serif;font-size:10px;transition:color .15s}
+.nav-btn.active{color:var(--sage)}
+.nav-icon{font-size:20px;line-height:1}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:48px 24px;color:var(--ink3)}
+.empty-icon{font-size:44px;margin-bottom:10px}
+.empty p{font-family:'Fraunces',serif;font-style:italic;font-size:17px;color:var(--ink2);margin-bottom:6px}
+.empty small{font-size:13px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:22px;font-size:13px;opacity:0;transition:all .22s;pointer-events:none;white-space:nowrap;z-index:999}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Spinner ── */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <header>
+    <div class="header-row">
+      <h1>Weekly <em>Meals</em></h1>
+      <span class="week-lbl" id="week-lbl"></span>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="mode-chat" onclick="setMode('chat')">Chat</button>
+      <button class="mode-btn" id="mode-voice" onclick="setMode('voice')">Voice</button>
+    </div>
+  </header>
+
+  <!-- Tabs (hidden in voice mode) -->
+  <div class="tabs" id="tabs">
+    <div class="tab active" id="tab-plan" onclick="switchTab('plan')">Plan</div>
+    <div class="tab" id="tab-shop" onclick="switchTab('shop')">Shop</div>
+    <div class="tab" id="tab-prefs" onclick="switchTab('prefs')">Prefs</div>
+  </div>
+
+  <!-- Main content -->
+  <div id="main">
+
+    <!-- Plan panel -->
+    <div class="panel active" id="panel-plan">
+      <button class="btn-primary" id="gen-btn" onclick="generatePlan()">✦ Generate this week's plan</button>
+      <div id="plan-container">
+        <div class="empty"><div class="empty-icon">🍽</div><p>No plan yet</p><small>Tap the button above to get started</small></div>
+      </div>
+    </div>
+
+    <!-- Shop panel -->
+    <div class="panel" id="panel-shop">
+      <button class="btn-primary btn-rust" id="shop-btn" onclick="generateShopping()">🛒 Build shopping list</button>
+      <div id="shop-container">
+        <div class="empty"><div class="empty-icon">🛒</div><p>No list yet</p><small>Generate a plan first, then build your list</small></div>
+      </div>
+    </div>
+
+    <!-- Prefs panel -->
+    <div class="panel" id="panel-prefs">
+      <div class="prefs-card">
+        <h3>Your preferences</h3>
+        <div class="pref-row"><label>Diet</label><input class="pref-input" id="p-diet" placeholder="e.g. vegetarian, none"></div>
+        <div class="pref-row"><label>Allergies</label><input class="pref-input" id="p-allergy" placeholder="e.g. no nuts, no dairy"></div>
+        <div class="pref-row"><label>Household</label><input class="pref-input" id="p-household" placeholder="e.g. 2 adults, 1 child"></div>
+        <div class="pref-row"><label>Cuisines</label><input class="pref-input" id="p-cuisines" placeholder="e.g. love Italian, less spicy"></div>
+        <div class="pref-row"><label>Cook time</label><input class="pref-input" id="p-time" placeholder="e.g. max 30 min on weekdays"></div>
+        <button class="save-btn" onclick="savePrefs()">Save preferences</button>
+      </div>
+      <div class="prefs-card" id="dislikes-card" style="display:none">
+        <h3>Foods to avoid</h3>
+        <div class="tag-row" id="dislikes-tags"></div>
+        <p style="font-size:12px;color:var(--ink3);margin-top:10px">Saved automatically from your feedback</p>
+      </div>
+    </div>
+
+    <!-- Voice screen (replaces tabs content) -->
+    <div id="voice-screen">
+      <div class="voice-status" id="v-status">Tap the mic to start</div>
+      <div class="voice-orb orb-idle" id="v-orb" onclick="toggleVoice()">🎙</div>
+      <div class="voice-hint" id="v-hint">Hold a conversation — ask for a plan, make changes, anything</div>
+      <div id="v-transcript" style="display:none;width:100%">
+        <div class="transcript-card">
+          <div class="transcript-lbl">You said</div>
+          <div class="transcript-text" id="v-said"></div>
+        </div>
+        <div class="response-card" id="v-response-card" style="display:none">
+          <div class="response-text" id="v-response"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- Chat input bar (hidden in voice mode) -->
+  <div class="chat-bar" id="chat-bar">
+    <div class="chat-row">
+      <button class="icon-btn mic-btn" id="quick-mic" onclick="quickVoice()" title="Voice note">🎙</button>
+      <input class="chat-input" id="chat-input" placeholder="Give feedback on your plan…" onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="icon-btn send-btn" onclick="sendChat()">↑</button>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <nav id="bottom-nav">
+    <button class="nav-btn active" id="nav-plan" onclick="switchTab('plan')"><span class="nav-icon">📅</span>Plan</button>
+    <button class="nav-btn" id="nav-shop" onclick="switchTab('shop')"><span class="nav-icon">🛒</span>Shop</button>
+    <button class="nav-btn" id="nav-prefs" onclick="switchTab('prefs')"><span class="nav-icon">⚙️</span>Prefs</button>
+  </nav>
+
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+let currentPlan = null;
+let currentMode = 'chat';
+let isListening = false;
+let recognition = null;
+let isSpeaking = false;
+
+// ── Week label ──────────────────────────────────────────────────
+(function(){
+  const now = new Date(), day = now.getDay();
+  const mon = new Date(now); mon.setDate(now.getDate() - (day===0?6:day-1));
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  const f = d => d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  document.getElementById('week-lbl').textContent = f(mon)+' – '+f(sun);
+})();
+
+// ── Toast ────────────────────────────────────────────────────────
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
+
+// ── Mode toggle ─────────────────────────────────────────────────
+function setMode(mode){
+  currentMode = mode;
+  document.getElementById('mode-chat').classList.toggle('active', mode==='chat');
+  document.getElementById('mode-voice').classList.toggle('active', mode==='voice');
+  document.getElementById('tabs').style.display = mode==='chat' ? 'flex' : 'none';
+  document.getElementById('chat-bar').style.display = mode==='chat' ? 'block' : 'none';
+  document.getElementById('bottom-nav').style.display = mode==='chat' ? 'flex' : 'none';
+  const vs = document.getElementById('voice-screen');
+  vs.classList.toggle('active', mode==='voice');
+  // Show chat panels
+  document.querySelectorAll('.panel').forEach(p => p.style.display = mode==='chat' ? '' : 'none');
+  if(mode==='chat') switchTab('plan');
+}
+
+// ── Tab switching ────────────────────────────────────────────────
+function switchTab(tab){
+  ['plan','shop','prefs'].forEach(t => {
+    document.getElementById('panel-'+t).classList.toggle('active', t===tab);
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('nav-'+t)?.classList.toggle('active', t===tab);
+  });
+  if(tab==='prefs') loadPrefs();
+}
+
+// ── Generate plan ────────────────────────────────────────────────
+async function generatePlan(){
+  const btn = document.getElementById('gen-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Planning your week…';
+  showSkeleton();
+  try{
+    const r = await fetch('/api/plan/generate',{method:'POST'});
+    const d = await r.json();
+    currentPlan = d.plan;
+    renderPlan(currentPlan);
+    toast('✦ Plan ready!');
+  }catch(e){ toast('Something went wrong'); showEmpty('plan'); }
+  finally{ btn.disabled=false; btn.innerHTML='↺ Regenerate plan'; }
+}
+
+function renderPlan(plan){
+  document.getElementById('plan-container').innerHTML = DAYS.map(day => {
+    const m = plan[day]||{};
+    return `<div class="day-card">
+      <div class="day-hdr"><span class="day-name">${day}</span></div>
+      <div class="meal-row"><span class="meal-type">Lunch</span><span class="meal-name">${m.lunch||'—'}</span></div>
+      <div class="meal-row"><span class="meal-type">Dinner</span><span class="meal-name">${m.dinner||'—'}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function showSkeleton(){
+  document.getElementById('plan-container').innerHTML = DAYS.map(d=>`
+    <div class="day-card">
+      <div class="day-hdr"><span class="day-name">${d}</span></div>
+      <div class="meal-row"><span class="meal-type">Lunch</span><span class="skel" style="width:160px"></span></div>
+      <div class="meal-row"><span class="meal-type">Dinner</span><span class="skel" style="width:140px"></span></div>
+    </div>`).join('');
+}
+
+function showEmpty(panel){ document.getElementById(panel+'-container').innerHTML='<div class="empty"><div class="empty-icon">😕</div><p>Something went wrong</p><small>Try again</small></div>'; }
+
+// ── Chat feedback ────────────────────────────────────────────────
+async function sendChat(){
+  const inp = document.getElementById('chat-input');
+  const text = inp.value.trim();
+  if(!text) return;
+  if(!currentPlan){ toast('Generate a plan first'); return; }
+  inp.value=''; inp.disabled=true;
+  showSkeleton();
+  try{
+    const r = await fetch('/api/plan/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({feedback:text})});
+    const d = await r.json();
+    currentPlan = d.plan;
+    renderPlan(currentPlan);
+    toast('Plan updated!');
+  }catch(e){ renderPlan(currentPlan); toast('Could not update'); }
+  finally{ inp.disabled=false; inp.focus(); }
+}
+
+// ── Quick voice note (chat mode mic button) ──────────────────────
+function quickVoice(){
+  const btn = document.getElementById('quick-mic');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ toast('Voice not supported — try Chrome or Safari'); return; }
+  if(isListening){ recognition && recognition.stop(); return; }
+  recognition = new SR();
+  recognition.continuous=false; recognition.interimResults=false; recognition.lang='en-GB';
+  recognition.onstart = ()=>{ isListening=true; btn.classList.add('recording'); btn.textContent='⏹'; };
+  recognition.onresult = e=>{ document.getElementById('chat-input').value = e.results[0][0].transcript; };
+  recognition.onerror = ()=>toast('Could not hear — try again');
+  recognition.onend = ()=>{ isListening=false; btn.classList.remove('recording'); btn.textContent='🎙'; };
+  recognition.start();
+}
+
+// ── Full voice mode ──────────────────────────────────────────────
+function setOrb(state, emoji){
+  const orb = document.getElementById('v-orb');
+  orb.className = 'voice-orb orb-'+state;
+  orb.textContent = emoji || {idle:'🎙',listening:'🎙',thinking:'⏳',speaking:'🔊'}[state];
+}
+
+function setVoiceStatus(s){ document.getElementById('v-status').textContent = s; }
+function setVoiceHint(s){ document.getElementById('v-hint').textContent = s; }
+
+function showTranscript(said, response){
+  const tc = document.getElementById('v-transcript');
+  tc.style.display='block';
+  document.getElementById('v-said').textContent = said;
+  const rc = document.getElementById('v-response-card');
+  const rt = document.getElementById('v-response');
+  if(response){ rc.style.display='block'; rt.textContent=response; }
+  else { rc.style.display='none'; }
+}
+
+async function toggleVoice(){
+  if(isSpeaking) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ toast('Voice not supported — try Chrome or Safari'); return; }
+
+  if(isListening){ recognition && recognition.stop(); return; }
+
+  recognition = new SR();
+  recognition.continuous=false; recognition.interimResults=false; recognition.lang='en-GB';
+
+  recognition.onstart = ()=>{
+    isListening=true;
+    setOrb('listening');
+    setVoiceStatus('Listening…');
+    setVoiceHint('Speak now — tap to stop');
+  };
+
+  recognition.onresult = async (e)=>{
+    const said = e.results[0][0].transcript;
+    isListening=false;
+    setOrb('thinking');
+    setVoiceStatus('Thinking…');
+    setVoiceHint('');
+    showTranscript(said, null);
+
+    try{
+      const r = await fetch('/api/plan/voice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({feedback:said})});
+      const d = await r.json();
+      currentPlan = d.plan;
+      // Speak the response
+      speakResponse(d.spoken || 'Done!', said);
+    }catch(err){
+      setOrb('idle'); setVoiceStatus('Something went wrong'); setVoiceHint('Tap to try again');
+    }
+  };
+
+  recognition.onerror = (e)=>{
+    isListening=false;
+    setOrb('idle');
+    setVoiceStatus('Could not hear — tap to try again');
+    setVoiceHint('');
+    if(e.error==='not-allowed') toast('Microphone permission denied');
+  };
+
+  recognition.onend = ()=>{ isListening=false; };
+  recognition.start();
+}
+
+function speakResponse(text, said){
+  if(!window.speechSynthesis){ showTranscript(said, text); setOrb('idle'); setVoiceStatus('Tap to speak again'); return; }
+  isSpeaking=true;
+  setOrb('speaking');
+  setVoiceStatus('Speaking…');
+  showTranscript(said, text);
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang='en-GB'; utt.rate=0.95; utt.pitch=1.0;
+  // Pick a natural voice if available
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = voices.find(v=>v.lang.startsWith('en')&&v.name.includes('Female'))
+                 || voices.find(v=>v.lang.startsWith('en')) || null;
+  if(preferred) utt.voice = preferred;
+  utt.onend = ()=>{ isSpeaking=false; setOrb('idle'); setVoiceStatus('Tap to speak again'); setVoiceHint(''); };
+  window.speechSynthesis.speak(utt);
+}
+
+// ── Shopping list ────────────────────────────────────────────────
+async function generateShopping(){
+  if(!currentPlan){ toast('Generate a plan first'); switchTab('plan'); return; }
+  const btn = document.getElementById('shop-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Building list…';
+  try{
+    const r = await fetch('/api/shopping',{method:'POST'});
+    const d = await r.json();
+    renderShopping(d.shopping);
+    toast('Shopping list ready!');
+  }catch(e){ toast('Could not build list'); }
+  finally{ btn.disabled=false; btn.innerHTML='↺ Rebuild list'; }
+}
+
+function renderShopping(shopping){
+  const container = document.getElementById('shop-container');
+  const categories = Object.entries(shopping);
+  const allItems = categories.flatMap(([,items])=>items);
+
+  const catHtml = categories.map(([cat, items])=>`
+    <div class="category-card">
+      <div class="cat-hdr">${cat}</div>
+      ${items.map((item,i)=>{
+        const parts = item.match(/^([\d.]+\s*(?:g|kg|ml|l|x|×)?\s*)?(.+)$/i)||[,,'',item];
+        const qty = item.match(/^(\d[\d.\s]*(?:g|kg|ml|l|x|×|\d+)?)\s+/i)?.[1]||'';
+        return `<div class="shop-item" onclick="toggleItem(this)">
+          <div class="check-dot">✓</div>
+          <span class="item-name-text">${item}</span>
+          <span class="remove-btn" onclick="event.stopPropagation();removeItem(this)">✕</span>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+
+  const reviewBar = `
+    <div class="ocado-bar">
+      <div class="ocado-meta"><strong>Ready to order?</strong> Review the list above, untick anything you have, then send to Ocado.</div>
+      <button class="ocado-confirm-btn" onclick="sendToOcado()">Send to Ocado basket →</button>
+      <p class="ocado-note">Opens Ocado with your items — you confirm payment there</p>
+    </div>`;
+
+  container.innerHTML = catHtml + reviewBar;
+}
+
+function toggleItem(el){ el.classList.toggle('removed'); updateOcadoCount(); }
+
+function removeItem(btn){
+  btn.closest('.shop-item').classList.toggle('removed');
+  updateOcadoCount();
+}
+
+function updateOcadoCount(){
+  const total = document.querySelectorAll('.shop-item').length;
+  const removed = document.querySelectorAll('.shop-item.removed').length;
+  const btn = document.querySelector('.ocado-confirm-btn');
+  if(btn) btn.textContent = `Send ${total-removed} items to Ocado basket →`;
+}
+
+function sendToOcado(){
+  const items = [...document.querySelectorAll('.shop-item:not(.removed) .item-name-text')]
+    .map(el=>el.textContent.trim().replace(/^\d[\d.\s]*(?:g|kg|ml|l|x|×)?\s*/i,''));
+  if(!items.length){ toast('No items selected'); return; }
+  // Open Ocado search for first item — user searches the rest manually
+  const firstSearch = encodeURIComponent(items[0]);
+  window.open(`https://www.ocado.com/search?entry=${firstSearch}`, '_blank');
+  toast(`Opening Ocado for "${items[0]}" and ${items.length-1} more items`);
+  // Copy full list to clipboard so user can paste items one by one
+  navigator.clipboard?.writeText(items.join('\n')).then(()=>toast('Full list copied to clipboard too!'));
+}
+
+// ── Preferences ──────────────────────────────────────────────────
+async function loadPrefs(){
+  const r = await fetch('/api/memory');
+  const m = await r.json();
+  const p = m.preferences||{};
+  document.getElementById('p-diet').value = p.diet||'';
+  document.getElementById('p-allergy').value = p.allergies||'';
+  document.getElementById('p-household').value = p.household||[p.adults?p.adults+' adults':'',p.children?p.children+' children':''].filter(Boolean).join(', ');
+  document.getElementById('p-cuisines').value = p.cuisines||'';
+  document.getElementById('p-time').value = p.max_cook_time||'';
+  const dislikes = m.disliked_meals||[];
+  if(dislikes.length){
+    document.getElementById('dislikes-card').style.display='block';
+    document.getElementById('dislikes-tags').innerHTML = dislikes.map(d=>`<span class="tag">${d}</span>`).join('');
+  }
+}
+
+async function savePrefs(){
+  const prefs = {};
+  const diet=document.getElementById('p-diet').value.trim();
+  const allergy=document.getElementById('p-allergy').value.trim();
+  const household=document.getElementById('p-household').value.trim();
+  const cuisines=document.getElementById('p-cuisines').value.trim();
+  const time=document.getElementById('p-time').value.trim();
+  if(diet) prefs.diet=diet;
+  if(allergy) prefs.allergies=allergy;
+  if(household) prefs.household=household;
+  if(cuisines) prefs.cuisines=cuisines;
+  if(time) prefs.max_cook_time=time;
+  await fetch('/api/memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preferences:prefs})});
+  toast('Preferences saved!');
+}
+
+// Init
+loadPrefs();
+window.speechSynthesis?.getVoices(); // Pre-load voices on iOS
+</script>
+</body>
+</html>
