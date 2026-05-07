@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from anthropic import Anthropic
 
 app = Flask(__name__, static_folder="static")
-client = Anthropic(api_key=os.environ["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"])
+client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 MEMORY_FILE = "memory.json"
 
 PLAN_SYSTEM = """You are a warm, practical weekly meal planner. Propose a 7-day plan (lunch + dinner each day).
