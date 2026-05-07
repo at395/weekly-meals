@@ -88,7 +88,7 @@ def generate_plan():
     mem = load_mem()
     msg = f"Generate a weekly meal plan.\n\n{build_profile(mem)}\n\nJSON only."
     conversation = [{"role": "user", "content": msg}]
-    r = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=2000,
+    r = client.messages.create(model="claude-3-5-haiku-20241022", max_tokens=2000,
                                 system=PLAN_SYSTEM, messages=conversation)
     raw = r.content[0].text.strip()
     conversation.append({"role": "assistant", "content": raw})
@@ -108,7 +108,7 @@ def feedback():
 
     # Extract dislikes quietly
     try:
-        r = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=150,
+        r = client.messages.create(model="claude-3-5-haiku-20241022", max_tokens=150,
             messages=[{"role":"user","content":f'Extract dislikes from: "{text}". JSON only: {{"dislikes":[],"likes":[]}}'}])
         ex = json.loads(r.content[0].text.strip())
         if ex.get("dislikes"):
@@ -119,7 +119,7 @@ def feedback():
 
     conv = mem.get("conversation", [])
     conv.append({"role":"user","content":f"Current plan:\n{json.dumps(plan,indent=2)}\n\nFeedback: {text}\n\nUpdate plan. JSON only."})
-    r = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=2000,
+    r = client.messages.create(model="claude-3-5-haiku-20241022", max_tokens=2000,
                                 system=PLAN_SYSTEM, messages=conv)
     raw = r.content[0].text.strip()
     conv.append({"role":"assistant","content":raw})
@@ -140,7 +140,7 @@ def voice_feedback():
         # Generate fresh plan from voice request
         msg = f"{text}\n\n{build_profile(mem)}\n\nJSON only."
         conversation = [{"role": "user", "content": msg}]
-        r = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=2000,
+        r = client.messages.create(model="claude-3-5-haiku-20241022", max_tokens=2000,
                                     system=PLAN_SYSTEM, messages=conversation)
         raw = r.content[0].text.strip()
         conversation.append({"role": "assistant", "content": raw})
@@ -154,7 +154,7 @@ def voice_feedback():
     # Apply feedback to existing plan
     conv = mem.get("conversation", [])
     conv.append({"role":"user","content":f"Current plan:\n{json.dumps(plan,indent=2)}\n\nVoice feedback: {text}\n\nUpdate plan. JSON only."})
-    r = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=2000,
+    r = client.messages.create(model="claude-3-5-haiku-20241022", max_tokens=2000,
                                 system=PLAN_SYSTEM, messages=conv)
     raw = r.content[0].text.strip()
     conv.append({"role":"assistant","content":raw})
@@ -165,7 +165,7 @@ def voice_feedback():
 
     # Generate a natural spoken summary of what changed
     try:
-        sr = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=100,
+        sr = client.messages.create(model="claude-3-5-haiku-20241022", max_tokens=100,
             messages=[{"role":"user","content":f'The user said: "{text}". The plan was updated. Write ONE friendly sentence (max 25 words) confirming what changed. No JSON.'}])
         spoken = sr.content[0].text.strip().strip('"')
     except:
@@ -179,7 +179,7 @@ def shopping():
     plan = mem.get("current_plan")
     if not plan:
         return jsonify({"error": "No plan yet"}), 400
-    r = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=1500,
+    r = client.messages.create(model="claude-3-5-haiku-20241022", max_tokens=1500,
         messages=[{"role":"user","content":f"{SHOPPING_SYSTEM}\n\nPlan:\n{json.dumps(plan,indent=2)}"}])
     raw = r.content[0].text.strip()
     shopping_list = parse_json(raw)
